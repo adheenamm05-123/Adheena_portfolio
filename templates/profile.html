@@ -11,7 +11,7 @@
 <a class="x pf-close" href="{% url 'index' %}" aria-label="Close and go to home">&times;</a>
 <main class="pf-wrap">
   <div class="avatar">
-    <img src="{% static 'img/profile.png' %}" alt="{{ p.name }}" onerror="this.style.display='none';this.nextElementSibling.style.display='grid'">
+    <img src="{% static 'img/profile.jpg' %}" alt="{{ p.name }}" onerror="this.style.display='none';this.nextElementSibling.style.display='grid'">
     <span class="ph" aria-hidden="true">{{ p.name|slice:":1" }}</span>
   </div>
   <div class="pf-details">
