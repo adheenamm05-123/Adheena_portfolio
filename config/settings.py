@@ -21,15 +21,17 @@ env = os.environ.get
 # SECURITY CONFIGURATION
 # =========================================================
 
-DEBUG = env("DJANGO_DEBUG", "1") == "1"
+DEBUG = env("DJANGO_DEBUG", "1").strip() == "1"
 
 SECRET_KEY = env(
     "DJANGO_SECRET_KEY",
-    "dev-only-insecure-key" if DEBUG else ""
+    "dev-only-insecure-key-change-this" if DEBUG else ""
 )
 
 if not SECRET_KEY:
-    raise RuntimeError("Set DJANGO_SECRET_KEY in production.")
+    raise RuntimeError(
+        "DJANGO_SECRET_KEY must be configured in production."
+    )
 
 ALLOWED_HOSTS = [
     host.strip()
@@ -86,7 +88,11 @@ ROOT_URLCONF = "config.urls"
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
-        "DIRS": [BASE_DIR / "templates"],
+
+        "DIRS": [
+            BASE_DIR / "templates",
+        ],
+
         "APP_DIRS": True,
 
         "OPTIONS": {
@@ -109,28 +115,34 @@ WSGI_APPLICATION = "config.wsgi.application"
 
 # =========================================================
 # DATABASE CONFIGURATION
-# NEON POSTGRESQL + SQLITE FALLBACK
+# PRODUCTION: POSTGRESQL
+# LOCAL: SQLITE
 # =========================================================
 
 DATABASE_URL = env("DATABASE_URL", "").strip()
 
 if DATABASE_URL:
 
-    # Neon PostgreSQL
     DATABASES = {
         "default": dj_database_url.parse(
             DATABASE_URL,
-            conn_max_age=600,
+            conn_max_age=0,
             ssl_require=True,
         )
     }
 
-elif env("DB_NAME"):
+elif not DEBUG:
 
-    # Manual PostgreSQL configuration
+    raise RuntimeError(
+        "DATABASE_URL is required in production."
+    )
+
+elif env("DB_NAME", "").strip():
+
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.postgresql",
+
             "NAME": env("DB_NAME"),
             "USER": env("DB_USER", ""),
             "PASSWORD": env("DB_PASSWORD", ""),
@@ -141,19 +153,38 @@ elif env("DB_NAME"):
                 "sslmode": "require",
             },
 
-            "CONN_MAX_AGE": 600,
+            "CONN_MAX_AGE": 0,
         }
     }
 
 else:
 
-    # Local SQLite database
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.sqlite3",
             "NAME": BASE_DIR / "db.sqlite3",
         }
     }
+
+
+# =========================================================
+# PASSWORD VALIDATION
+# =========================================================
+
+AUTH_PASSWORD_VALIDATORS = [
+    {
+        "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator",
+    },
+    {
+        "NAME": "django.contrib.auth.password_validation.MinimumLengthValidator",
+    },
+    {
+        "NAME": "django.contrib.auth.password_validation.CommonPasswordValidator",
+    },
+    {
+        "NAME": "django.contrib.auth.password_validation.NumericPasswordValidator",
+    },
+]
 
 
 # =========================================================
@@ -178,7 +209,7 @@ STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 
 STATICFILES_DIRS = [
-    BASE_DIR / "static"
+    BASE_DIR / "static",
 ]
 
 
@@ -207,6 +238,8 @@ EMAIL_HOST_USER = env("EMAIL_HOST_USER", "")
 EMAIL_HOST_PASSWORD = env("EMAIL_HOST_PASSWORD", "")
 
 EMAIL_USE_TLS = env("EMAIL_USE_TLS", "1") == "1"
+
+EMAIL_USE_SSL = env("EMAIL_USE_SSL", "0") == "1"
 
 CONTACT_TO_EMAIL = env("CONTACT_TO_EMAIL", "")
 
@@ -242,7 +275,7 @@ if not DEBUG:
 
     SECURE_PROXY_SSL_HEADER = (
         "HTTP_X_FORWARDED_PROTO",
-        "https"
+        "https",
     )
 
     CSRF_TRUSTED_ORIGINS = [
@@ -254,6 +287,8 @@ if not DEBUG:
         if origin.strip()
     ]
 
+    SECURE_REFERRER_POLICY = "strict-origin-when-cross-origin"
+
 
 # =========================================================
 # GENERAL SECURITY
@@ -262,3 +297,12 @@ if not DEBUG:
 SECURE_CONTENT_TYPE_NOSNIFF = True
 
 X_FRAME_OPTIONS = "DENY"
+
+
+# =========================================================
+# MEDIA FILES
+# =========================================================
+
+MEDIA_URL = "/media/"
+
+MEDIA_ROOT = BASE_DIR / "media"
